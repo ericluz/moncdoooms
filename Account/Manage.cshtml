@@ -1,0 +1,206 @@
+﻿@using WebMatrix.WebData
+
+@* Remove this section if you are using bundling *@
+@section Scripts {
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+}
+
+@{
+    WebSecurity.RequireAuthenticatedUser();
+
+    Layout = "~/_SiteLayout.cshtml";
+    Page.Title = "Manage Account";
+
+    var action = Request.Form["action"];
+
+    bool hasLocalAccount = OAuthWebSecurity.HasLocalAccount(WebSecurity.CurrentUserId);
+
+    string successMessage = "";
+    var message = Request.QueryString["message"];
+    if (message == "ChangedPassword") {
+        successMessage = "Your password has been changed.";
+    } else if (message == "SetPassword") {
+        successMessage = "Your password has been set.";
+    } else if (message == "RemovedLogin") {
+        successMessage = "The external login was removed.";
+    }
+
+    var externalLogins =
+        (from account in OAuthWebSecurity.GetAccountsFromUserName(WebSecurity.CurrentUserName)
+         let clientData = OAuthWebSecurity.GetOAuthClientData(account.Provider)
+         select new { Provider = account.Provider, ProviderDisplayName = clientData.DisplayName, UserId = account.ProviderUserId })
+        .ToList();
+    bool canRemoveLogin = externalLogins.Count > 1 || hasLocalAccount;
+
+    // Setup validation
+    if (hasLocalAccount) {
+        Validation.RequireField("currentPassword", "The current password field is required.");
+        Validation.Add("currentPassword",
+            Validator.StringLength(
+                maxLength: Int32.MaxValue,
+                minLength: 6,
+                errorMessage: "Current password must be at least 6 characters"));
+    }
+    Validation.RequireField("newPassword", "The new password field is required.");
+    Validation.Add("confirmPassword",
+        Validator.Required("The confirm new password field is required."),
+        Validator.EqualsTo("newPassword", "The new password and confirmation password do not match."));
+    Validation.Add("newPassword",
+        Validator.StringLength(
+            maxLength: Int32.MaxValue,
+            minLength: 6,
+            errorMessage: "New password must be at least 6 characters"));
+
+    if (IsPost) {
+        AntiForgery.Validate();
+        if (action == "password") {
+            // Handle local account password operations
+            var currentPassword = Request.Form["currentPassword"];
+            var newPassword = Request.Form["newPassword"];
+            var confirmPassword = Request.Form["confirmPassword"];
+
+            if (Validation.IsValid()) {
+                if (hasLocalAccount) {
+                    if (WebSecurity.ChangePassword(WebSecurity.CurrentUserName, currentPassword, newPassword)) {
+                        Response.Redirect("~/Account/Manage?message=ChangedPassword");
+                        return;
+                    } else {
+                        ModelState.AddFormError("An error occurred when attempting to change the password. Please try again.");
+                    }
+                } else {
+                    bool requireEmailConfirmation = !WebMail.SmtpServer.IsEmpty();
+                    try {
+                        WebSecurity.CreateAccount(WebSecurity.CurrentUserName, newPassword, requireEmailConfirmation);
+                        Response.Redirect("~/Account/Manage?message=SetPassword");
+                        return;
+                    } catch (System.Web.Security.MembershipCreateUserException e) {
+                        ModelState.AddFormError(e.Message);
+                    }
+                }
+            } else {
+                ModelState.AddFormError("Password change was unsuccessful. Please correct the errors and try again.");
+            }
+        } else if (action == "removeLogin") {
+            // Remove external login
+            var provider = Request.Form["provider"];
+            var userId = Request.Form["userId"];
+
+            message = null;
+            var ownerAccount = OAuthWebSecurity.GetUserName(provider, userId);
+            // Only remove the external login if it is owned by the currently logged in user and it is not the users last login credential
+            if (ownerAccount == WebSecurity.CurrentUserName && canRemoveLogin) {
+                OAuthWebSecurity.DeleteAccount(provider, userId);
+                message = "RemovedLogin";
+            }
+            Response.Redirect(Href("~/Account/Manage", new { message }));
+            return;
+        } else {
+            // Assume this an external login request
+            string provider = Request.Form["provider"];
+            if (!provider.IsEmpty()) {
+                OAuthWebSecurity.RequestAuthentication(provider, Href("~/Account/RegisterService", new { returnUrl = Href("~/Account/Manage") }));
+                return;
+            }
+        }
+    }
+}
+<hgroup class="title">
+    <h1>@Page.Title</h1>
+</hgroup>
+
+@if (!successMessage.IsEmpty()) {
+    /* Sucess/Positive Message Appear Here */
+    <div class="alert alert-success">
+        <i class="fa fa-check-square-o fa-lg"></i>&nbsp;@successMessage
+    </div>
+}
+
+<p>You're logged in as: <strong>@WebSecurity.CurrentUserName</strong></p>
+
+@if (hasLocalAccount) {
+    /* Display something if user has local password */
+} else {
+    <div class="alert alert-danger">
+        <sup><i class="fa fa-quote-left"></i></sup>You do not have a local password<sup><i class="fa fa-quote-right"></i></sup> for this site. Add a local password so you can log in without an external login.
+    </div>
+}
+
+<form method="post" class="form-horizontal">
+    @AntiForgery.GetHtml()
+    @Html.ValidationSummary(excludeFieldErrors: true)
+
+    <fieldset>
+        <legend>
+        @if (hasLocalAccount) {
+            <text>Change Password Form</text>
+        } else {
+            <text>Set Password Form</text>
+        }
+        </legend>
+        
+            @if (hasLocalAccount) {
+                <div class="form-group">
+                    <label for="currentPassword" @if (!ModelState.IsValidField("currentPassword")) {<text>class="error-label"</text>}class="col-sm-2">Current password</label>
+                    <div class="col-sm-4">
+                    <input type="password" class="form-control" id="currentPassword" name="currentPassword" @Validation.For("currentPassword")/>
+                    @Html.ValidationMessage("currentPassword")
+                    </div>
+                </div>
+            }
+            <div class="form-group">
+                <label for="newPassword" @if (!ModelState.IsValidField("newPassword")) {<text>class="error-label"</text>} class="col-sm-2">New password</label>
+                <div class="col-sm-4">
+                <input type="password" class="form-control" id="newPassword" name="newPassword" @Validation.For("newPassword")/>
+                @Html.ValidationMessage("newPassword")
+                </div>
+            </div>
+
+            
+            <div class="form-group">
+                <label for="confirmPassword" @if (!ModelState.IsValidField("confirmPassword")) {<text>class="error-label"</text>} class="col-sm-2">Confirm new password</label>
+                <div class="col-sm-4">
+                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" @Validation.For("confirmPassword")/>
+                @Html.ValidationMessage("confirmPassword")
+                </div>
+            </div>
+        
+            <div class="form-group">
+                <div class="col-sm-2"></div>
+                <div class="col-sm-4">
+                @if (hasLocalAccount) {
+                    <button type="submit" class="btn btn-default" name="action" value="password"><i class="fa fa-check-square-o"></i>&nbsp;Change Password</button>
+                } else {
+                    <button type="submit" class="btn btn-default" name="action" value="password"><i class="fa fa-check-square-o"></i>&nbsp;Set Password</button>
+                }
+                </div>
+            </div>
+    </fieldset>
+</form>
+
+@if (externalLogins.Count > 0) {
+<section id="externalLogins" class="well">
+        <h4>Registered external logins</h4>
+        <table class="table table-condensed table-hover">
+            <tbody>
+            @foreach (var externalLogin in externalLogins) {
+                <tr>
+                    <td class="col-sm-1">
+                        @if (canRemoveLogin) {
+                            <form method="post">
+                                @AntiForgery.GetHtml()
+                                <button type="submit" class="btn btn-default btn-block btn-sm" name="action" value="removeLogin" title="Remove this @externalLogin.ProviderDisplayName credential from your account"><i class="fa fa-trash-o"></i>&nbsp;Remove</button>
+                                <input type="hidden" name="provider" value="@externalLogin.Provider" />
+                                <input type="hidden" name="userId" value="@externalLogin.UserId" />
+                            </form>
+                        } else {
+                            @: &nbsp;
+                        }
+                    </td>
+                    <td>@externalLogin.ProviderDisplayName</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+</section>
+}

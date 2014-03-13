@@ -1,0 +1,183 @@
+﻿@section Scripts {
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+}
+
+@{
+    Page.Title = "Place Your Order";
+
+    var db = Database.Open("monco");
+    var productId = UrlData[0].AsInt();
+    var price = Request["price"].AsDecimal();
+    var quantity = Request["orderQty"].AsInt();
+    var commandText = string.Empty;
+    var cartId = 0;
+    var totalItems = 0;    
+    
+    commandText = "SELECT * FROM Products WHERE Id = @0";
+    var product = db.QuerySingle(commandText, productId);
+    var images = db.QuerySingle("SELECT FileTitle, FileExtension FROM Products_Image WHERE ForProductId=@0", product.Id); 
+    var categories = db.QuerySingle("SELECT * FROM Products_Category WHERE Id=@0", product.CategoryId);
+    var checkInventory = db.QuerySingle("SELECT SUM(Quantity) as totalStock FROM Products_Inventory WHERE ProductId=@0", product.Id);
+
+    if (product == null) {
+        Response.Redirect("~/");
+    }
+
+    // When cart cookies is set (not expired)
+    if(Request.Cookies["cart"] != null) {
+        cartId = Request.Cookies["cart"].Value.AsInt();
+        commandText = "SELECT SUM(Quantity) AS TotalItems FROM CartItems WHERE CartId = @0";
+        object result = db.QueryValue(commandText, cartId);
+        totalItems = result == DBNull.Value ? 0 : Convert.ToInt32(result);
+    }
+
+    // Setup validation
+    Validation.RequireField("orderQty", "Please a quantity of your Order.");
+
+    if (quantity > checkInventory.totalStock) {
+        ModelState.AddFormError("You have entered a Quantity that is higher to our current stock, please try it again.");
+    }
+
+    // When form is submitted and entered quantity is not not higher than available stock
+    if(IsPost && quantity <= checkInventory.totalStock) {
+        AntiForgery.Validate();
+
+        // When found no cart cookies
+        if(Request.Cookies["cart"] == null) {
+            commandText = "INSERT INTO Cart (DateCreated) VALUES (GetDate())";
+            db.Execute(commandText);
+            cartId = (int)db.GetLastInsertId();
+        }
+
+        commandText = "SELECT Quantity FROM CartItems WHERE CartId = @0 AND ProductId = @1";
+        var reduction = db.QueryValue(commandText, cartId, productId);
+        if(reduction != null){
+            totalItems -= reduction;
+        }
+
+        commandText = "DELETE FROM CartItems WHERE CartId = @0 AND ProductId = @1";
+        db.Execute(commandText, cartId, productId);
+
+        commandText = "INSERT INTO CartItems (CartId, ProductId, Quantity, Price) VALUES (@0, @1, @2, @3)";
+        db.Execute(commandText, cartId, productId, quantity, price);
+
+        totalItems += quantity;
+
+        Response.Cookies["cart"].Value = cartId.ToString();
+        Response.Cookies["cart"].Expires = DateTime.Now.AddDays(1); // Set to expire this after 1 day
+    }
+}
+
+<div class="row">
+    <div class="col-md-12">
+        @Html.ValidationSummary(excludeFieldErrors: true)
+    </div>
+</div>
+
+<div class="row">
+
+    <div class="col-md-4">
+        <h1></h1>
+        <div class="row">
+          <div class="col-md-12">
+            <a class="image-popup-vertical-fit thumbnail" href="~/Uploaded/@images.FileTitle@images.FileExtension">
+                <img class="image-popup-vertical-fit" src="~/Uploaded/@images.FileTitle@images.FileExtension" alt="@images.FileTitle + @images.FileExtension" />
+            </a>
+          </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <h3>@product.Name <small>@categories.Name</small></h3>
+        <div class="">
+            <h4>Price: <strong class="text-danger">@String.Format("{0:c}", product.Price)</strong></h4>
+            @{
+                if(checkInventory.totalStock == null || checkInventory.totalStock < 1) {
+                    <h4 class="text-danger">Out of stock.</h4>        
+                } else {
+                    <h4 class="text-success"><small class="text-muted">available: @checkInventory.totalStock</small> In stock.</h4>
+                }
+            }            
+        </div>
+        
+        <ul class="orderPageList" data-role="listview">
+            <li>
+                <div class="text-justify">
+                    <p class="description">@product.Description</p>
+                </div>                
+            </li>
+        </ul>
+    </div>
+
+    <div class="col-md-2">
+        <h1></h1>
+        <form action="" class="form-horizontal" method="post" role="form">
+        @AntiForgery.GetHtml()
+            <div class="form-group">
+                <label class="col-sm-5 control-label">Quantity</label>
+                <div class="col-sm-7">
+                <input type="text" class="form-control" id="orderQty" min="1" max="@checkInventory.totalStock" name="orderQty" pattern="{4}" value="@(quantity == 0 ? 1 : quantity)"/>
+                </div>
+                <div class="col-sm-12">
+                    @Html.ValidationMessage("orderQty")
+                </div>
+            </div>
+
+            <!-- This field is use to compute client-side pricing, remain hidden -->
+            <div class="form-group" hidden>
+                    Current: ($)<span id="orderPrice">@string.Format("{0:f}", product.Price)</span>
+            </div>
+
+            <div class="form-group">
+                    <div class="col-sm-12 form-control">
+                    Total:<span class="pull-right" id="orderTotal">@string.Format("{0:f}", quantity == 0 ? product.Price : quantity * product.Price)</span>
+                    </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-sm-12">
+                    <input type="hidden" name="productId" value="@product.Id" />
+                    <input type="hidden" name="price" value="@product.Price" />
+                    @{
+                        if(checkInventory.totalStock == null || checkInventory.totalStock < 1) {
+                            <h4 class="text-danger">We are already out of stock, kindly contact us to inform that you are interested in this product.</h4>
+                        } else {
+                            <button type="submit" class="btn btn-default btn-block"><i class="fa fa-shopping-cart"></i> &nbsp;Add to Cart</button>
+                        }
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-sm-12">
+                    @if(totalItems > 0){
+                        var itemtxt = (totalItems == 1) ? "item" : "items" ;
+                        <text>Your cart contain <strong>@totalItems</strong> @itemtxt</text>
+                    }
+                </div>
+            </div>
+        
+        </form>
+    </div>
+
+</div> <!-- end of main row -->
+
+<script type="text/javascript">
+    $(function () {
+        var price = parseFloat($("#orderPrice").text()).toFixed(2),
+            total = $("#orderTotal"),
+            orderQty = $("#orderQty");
+
+        orderQty.on('change', function () {
+            var quantity = parseInt(orderQty.val());
+            if (!quantity || quantity < 1) {
+                orderQty.val(1);
+                quantity = 1;
+            } else if (quantity.toString() !== orderQty.val()) {
+                orderQty.val(quantity);
+            }
+            total.text('$' + (price * quantity).toFixed(2));
+        });
+    });
+</script>

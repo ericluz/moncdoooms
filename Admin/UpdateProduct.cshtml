@@ -1,0 +1,138 @@
+﻿@{
+    Layout = "~/_AdminLayout.cshtml";
+    Page.Title = "Inventory Management / Update Product";
+
+    // Initialize general page variables
+    var Name = "";
+    var Description = "";
+    var Price = Decimal.Zero;
+    int CategoryId;
+
+    // Setup validation
+    Validation.RequireField("Name", "Product name is required.");
+    Validation.RequireField("Description", "Product description is required.");
+    Validation.RequireField("Price", "Product price is required.");
+    Validation.RequireField("Category", "Category is required.");
+
+    var ProductId  = UrlData[0];
+
+    if (ProductId.IsEmpty()) {
+         Response.Redirect("~/Admin/InventoryManagement");
+    }
+
+    // Open database connection
+    var db = Database.Open("monco");
+
+    if (IsPost && Validation.IsValid()) {
+        AntiForgery.Validate();
+
+        Name = Request["Name"];
+        Description = Request["Description"];
+        Price = Request["Price"].AsDecimal();
+        CategoryId = Request["Category"].AsInt();
+
+        var updateQueryString = "UPDATE Products SET Name=@0, Description=@1, Price=@2, CategoryId=@3 WHERE Id=@4" ;
+        db.Execute(updateQueryString, Name, Description, Price, CategoryId, ProductId);
+        
+        Response.Redirect(@Href("~/Admin/InventoryManagement"));
+    }
+    else {
+        var selectQueryString = "SELECT * FROM Products WHERE Id=@0";
+
+        var row = db.QuerySingle(selectQueryString, ProductId);
+        Name = row.Name;
+        Description = row.Description;
+        Price = row.Price;
+        CategoryId = row.CategoryId;
+    }
+
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <h1 class="page-header"><i class="fa fa-truck"></i>&nbsp;@Page.Title</h1>
+    </div>
+    <!-- /.col-lg-12 -->
+</div>
+<!-- /.row -->
+
+<div class="row">
+    <div class="col-lg-12">
+        @Html.ValidationSummary("Errors with your submission:", excludeFieldErrors: true, htmlAttributes: null)
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <a href="~/Admin/InventoryManagement"><i class="fa fa-arrow-left"></i>&nbsp; Return</a> /
+                Update Product Form
+                <div class="pull-right" title="Product Code">
+                    <span class="label label-danger">#@ProductId</span>
+                </div>
+            </div>
+            <!-- /.panel-heading -->
+            
+            <div class="panel-body">
+                <form id="update-product-form" class="form-horizontal" role="form" method="POST">
+                @AntiForgery.GetHtml()
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Product Name:</label>
+                        <div class="col-sm-10">
+                        <input type="text" class="form-control" name="Name" size="50" value="@Name" required />
+                        @* Write any product name validation errors to the page *@
+                        @Html.ValidationMessage("Name")
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Description:</label>
+                        <div class="col-sm-10">
+                        <textarea class="form-control" name="Description" rows="3" required>@Description</textarea>
+                        @* Write any description validation errors to the page *@
+                        @Html.ValidationMessage("Description")
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Category:</label>
+                        <div class="col-sm-10">
+                        <select class="form-control" name="Category" required>
+                            @{
+                              var CategoryQueryString = "SELECT * FROM Products_Category";  
+                             
+                                foreach (var row in db.Query(CategoryQueryString)) {
+                                <option @if(row.Id == CategoryId){<text>selected</text>} value="@row.Id">@row.Name</option>
+                                }
+                             }
+                        </select>
+                        @* Write any category validation errors to the page *@
+                        @Html.ValidationMessage("Category")
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Unit Price:</label>
+                        <div class="col-sm-10">
+                        <input type="number" class="form-control" name="Price" value="@Price" required />
+                        @* Write any price validation errors to the page *@
+                        @Html.ValidationMessage("Price")
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <!-- /.panel-body -->
+
+            <div class="panel-footer">
+                <div class="text-right">
+                    <button type="submit" class="btn btn-primary" form="update-product-form">Save Changes</button>
+                </div>
+            </div>
+        </div>
+        <!-- /.panel -->
+    </div>
+    <!-- /.col-lg-12 -->
+</div>
+<!-- /.row -->

@@ -1,0 +1,147 @@
+﻿@{
+    var db = Database.Open("monco");
+    var commandText = string.Empty;
+    var cartId = 0;
+    var totalItems = 0;
+
+    if(Request.Cookies["cart"] != null){
+        cartId = Request.Cookies["cart"].Value.AsInt();
+        commandText = "SELECT SUM(Quantity) AS TotalItems FROM CartItems WHERE CartId = @0";
+        object result = db.QueryValue(commandText, cartId);
+        totalItems = result == DBNull.Value ? 0 : Convert.ToInt32(result);
+    }
+}
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>MONCO MDC - @Page.Title</title>
+        <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+        <link href="~/Content/shop-homepage.css" rel="stylesheet" />
+
+        <!-- Core CSS - Include with every page -->
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" /> <!-- Bootstrap CSS -->
+        <link href="http://bootswatch.com/lumen/bootstrap.min.css" rel="stylesheet" /> <!-- Bootstrap Customer theme -->
+        
+        <!-- Easy ways to get Font Awesome 4.0.3 onto your website -->
+        <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet" />
+
+        <!-- Page-Level Plugin CSS - Dashboard -->
+        <link href="~/Content/animate.css" rel="stylesheet" />
+        <link href="~/Content/magnific-popup.css" rel="stylesheet" />
+        
+        <!-- jQuery Core Scripts - Include with every page -->
+        <script src="~/Scripts/jquery-2.1.0.min.js"></script>       
+        <script src="~/Scripts/modernizr-2.6.2.js"></script>
+        <script src="~/Scripts/jquery.magnific-popup.js"></script>
+        
+        <script src="~/Scripts/DataTables-1.9.4/media/js/jquery.dataTables.js"></script>
+        <!-- Bootstrap Javajscript - CDN -->
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script> 
+       
+        <script src="~/Scripts/monco.admin.js"></script>
+        <!-- RenderSection Scripts / To minimize the load on browser include page only scripts -->
+        @RenderSection("Scripts", required: false)
+    </head>
+    <body>
+        <div id="page">
+            <header>
+                <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                            <a class="navbar-brand" href="~/">Monco MDC</a>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse navbar-ex1-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="~/">Home</a></li>
+                                <li><a href="#products">Products</a></li>
+                                <li><a href="~/About">About Us</a></li>
+                                <li><a href="#contact">Contact Us</a></li>
+                            </ul>
+
+                            <!-- Login portion of navbar -->
+                            <ul class = "nav navbar-nav navbar-right">
+                                <li><a href="~/ReviewCart">
+                                    <i class="fa fa-shopping-cart fa-lg"></i>&nbsp;
+                                    Cart (@totalItems)</a></li>
+
+                                @if (WebSecurity.IsAuthenticated) {
+                                    <text>
+                                            <li class="dropdown">
+                                                <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                                    <i class="fa fa-user fa-lg"></i>&nbsp;
+                                                    <i class="fa fa-caret-down"></i>
+                                                </a>
+                                                <ul class="dropdown-menu dropdown-user animated half flipInX">
+                                                    @if (Roles.IsUserInRole("admin")) {
+                                                        <text>
+                                                        <li>
+                                                            <a class="email" href="~/Admin/Admin" title="Admin Panel">
+                                                            <span class="fa fa-lock"></span>&nbsp;
+                                                            Admin Panel</a>
+                                                        </li>
+                                                        </text>
+                                                    }
+                                                    <li><a href="~/Account/Manage"><i class="fa fa-user"></i>&nbsp;
+                                                        Profile</a>
+                                                    </li>
+                                                    <li class="divider"></li>
+                                                    <li>
+                                                                        <form id="logoutForm" action="~/Account/Logout" method="post">
+                                                                        @AntiForgery.GetHtml()
+                                                                        </form>
+                                                                        <a href="javascript:document.getElementById('logoutForm').submit()">
+                                                                        <i class="fa fa-sign-out"></i>&nbsp;
+                                                                        Logout</a>
+                                                    </li>
+                                                </ul>
+                                                <!-- /.dropdown-user -->
+                                            </li>
+                                            <!-- /.dropdown -->
+                                    </text>
+                                } else {
+                                    <li><a href="~/Account/Register">Register</a></li>
+                                    <li class="dropdown">
+                                    <a class="dropdown-toggle" href="~/Account/Login">
+                                        <i class="fa fa-sign-in"></i>&nbsp;
+                                        Sign In</a>
+                                    </li>
+                                }
+                                
+                            </ul> <!-- /narbar-right -->
+                        </div> <!-- /.navbar-collapse -->
+                    </div> <!-- /.container -->
+                </nav>
+            </header>
+
+            <div class="container">
+                @RenderBody()
+            </div>
+
+            <div class="container">
+                <hr>
+
+                <footer>
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <p>
+                                &copy; @DateTime.Now.Year - Monco MDC
+                            </p>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+
+        </div>
+    </body>
+</html>

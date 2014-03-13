@@ -1,0 +1,36 @@
+﻿@using Microsoft.Web.Helpers;
+
+@{
+    WebSecurity.InitializeDatabaseConnection("monco", "UserProfile", "UserId", "Email", false);
+
+    // To let users of this site log in using their accounts from other sites such as Microsoft, Facebook, Twitter,
+    // you must update this site. For more information visit http://go.microsoft.com/fwlink/?LinkID=226949
+
+    //OAuthWebSecurity.RegisterMicrosoftClient(
+    //    clientId: "",
+    //    clientSecret: "");
+
+    //OAuthWebSecurity.RegisterTwitterClient(
+    //    consumerKey: "",
+    //    consumerSecret: "");
+
+    OAuthWebSecurity.RegisterFacebookClient(
+        appId: "253161028189399",
+        appSecret: "f24282b3ed35bd02170775ff05ab203e");
+
+    // Add the PublicKey and PrivateKey strings with your public
+    // and private keys. Obtain your PublicKey and PrivateKey
+    // at the ReCaptcha.Net (http://recaptcha.net) website.
+    ReCaptcha.PublicKey = "6Lc-0u8SAAAAAJ7OEiatYAY0sA9lZ1hbQAWaEsBs";
+    ReCaptcha.PrivateKey = "6Lc-0u8SAAAAAF-1uiUDJEuj4wsmJzeadZVoZPiR";
+
+    OAuthWebSecurity.RegisterGoogleClient();
+
+    //WebMail.SmtpServer = "mailserver.example.com";
+    //WebMail.EnableSsl = true;
+    //WebMail.UserName = "username@example.com";
+    //WebMail.Password = "your-password";
+    //WebMail.From = "your-name-here@example.com";
+
+    // To learn how to optimize scripts and stylesheets in your site go to http://go.microsoft.com/fwlink/?LinkID=248973
+}
