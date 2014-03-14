@@ -23,7 +23,8 @@
 }
 
 @if(cartItems.Count() > 0) {
-<h1>Review Your Cart</h1>
+
+<h2>Thank you! Please pay now to complete your purchase.</h2>
 
 <div id="grid" class="table-responsive">
 @grid.GetHtml(
@@ -39,11 +40,11 @@
     )
 )
 
-<a class="btn btn-primary" href="~/CheckoutCart?CartId=@cartId">Proceed Checkout</a>
+<a class="btn btn-primary" href="~/CheckoutCart?CartId=@cartId">Pay Now</a>
 </div>
 
 } else {
-    <text><h1>Your Shopping Cart is empty.</h1></text>
+    <text><h2>Your Shopping Cart is empty.</h2></text>
 }
 
 @section scripts{

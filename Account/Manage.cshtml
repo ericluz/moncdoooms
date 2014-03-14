@@ -4,6 +4,14 @@
 @section Scripts {
     <script src="~/Scripts/jquery.validate.min.js"></script>
     <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+
+    <script>
+    $(document).ready(function () {
+        $("#accordion").on('shown.bs.collapse', function () {
+            //$.cookie('accordion', 'the_value', { expires: 1, path: '/' });
+        });
+    });
+    </script>
 }
 
 @{
@@ -13,8 +21,27 @@
     Page.Title = "Manage Account";
 
     var action = Request.Form["action"];
+    var db = Database.Open("monco");
+
+    // Initialize variables for user profile update operation
+    var fullname = "";
+    var lastname = "";
+    var gender = "";
+    DateTime birthdate;
+    birthdate = Convert.ToDateTime("0001-01-01");
 
     bool hasLocalAccount = OAuthWebSecurity.HasLocalAccount(WebSecurity.CurrentUserId);
+
+    // Query for current user profile info then display in the follow fields
+    if (hasLocalAccount && !IsPost) {
+        var queryUserProfile = "SELECT * FROM UserProfile WHERE UserId=@0";
+        var UserProfile = db.QuerySingle(queryUserProfile, WebSecurity.CurrentUserId);        
+
+        fullname = UserProfile.FirstName;
+        lastname = UserProfile.LastName;
+        gender = UserProfile.Gender;
+        birthdate = Convert.ToDateTime(UserProfile.BirthDate);
+    }
 
     string successMessage = "";
     var message = Request.QueryString["message"];
@@ -33,15 +60,8 @@
         .ToList();
     bool canRemoveLogin = externalLogins.Count > 1 || hasLocalAccount;
 
-    // Setup validation
-    if (hasLocalAccount) {
-        Validation.RequireField("currentPassword", "The current password field is required.");
-        Validation.Add("currentPassword",
-            Validator.StringLength(
-                maxLength: Int32.MaxValue,
-                minLength: 6,
-                errorMessage: "Current password must be at least 6 characters"));
-    }
+    // To avoid conflict validation on user profile
+    if (action != "profile") {
     Validation.RequireField("newPassword", "The new password field is required.");
     Validation.Add("confirmPassword",
         Validator.Required("The confirm new password field is required."),
@@ -51,11 +71,60 @@
             maxLength: Int32.MaxValue,
             minLength: 6,
             errorMessage: "New password must be at least 6 characters"));
-
+    }
+                    
     if (IsPost) {
         AntiForgery.Validate();
-        if (action == "password") {
+
+        if (action == "profile") {
+            // Handle user profile update operations
+            
+            // Setup validation for user profile update operation
+            Validation.RequireField("fullname", "Providing a name is not that hard.");
+            Validation.RequireField("lastname", "Providing a name is not that hard.");
+            Validation.RequireField("gender", "Please specifiy your gender.");
+            Validation.Add("gender", 
+            Validator.StringLength(
+                maxLength: 1,
+                minLength: 1,
+                errorMessage: "You got a problem with your gender option"));
+
+            fullname = Request.Form["fullname"];
+            lastname = Request.Form["lastname"];
+            gender = Request.Form["gender"];
+            birthdate = Convert.ToDateTime(Request.Form["birthdate"]);
+            int updateId = WebSecurity.CurrentUserId;
+
+            if (Validation.IsValid()) {
+
+                if(hasLocalAccount) {
+                    // Check if the current user is in the database
+                    var checkUpdateId = db.Query("SELECT * FROM UserProfile WHERE UserId=@0", updateId);
+                    if(checkUpdateId.Count() == 1) {
+                        var commandText = "UPDATE UserProfile SET FirstName=@0, LastName=@1, Gender=@2, BirthDate=@3 WHERE UserId=@4";
+                        db.Execute(commandText, fullname, lastname, gender, birthdate, updateId);
+                    } else {
+                        // Add error if userId is not found
+                        ModelState.AddFormError("A problem occur while petching your information, Please try it again.");
+                    }
+                }
+            } else {
+                ModelState.AddFormError("Profile update was unsuccessful. Please correct the errors and try again.");
+            }
+        }
+        else if (action == "password") {
             // Handle local account password operations
+            
+            // Setup validation
+            if (hasLocalAccount) {
+                Validation.RequireField("currentPassword", "The current password field is required.");
+                Validation.Add("currentPassword",
+                    Validator.StringLength(
+                        maxLength: Int32.MaxValue,
+                        minLength: 6,
+                        errorMessage: "Current password must be at least 6 characters"));
+            }
+
             var currentPassword = Request.Form["currentPassword"];
             var newPassword = Request.Form["newPassword"];
             var confirmPassword = Request.Form["confirmPassword"];
@@ -105,13 +174,21 @@
         }
     }
 }
+
 <hgroup class="title">
     <h1>@Page.Title</h1>
 </hgroup>
 
+<div class="row">
+    <div class="col-md-12">
+        @Html.ValidationSummary(excludeFieldErrors: true)
+    </div>
+</div>
+
 @if (!successMessage.IsEmpty()) {
     /* Sucess/Positive Message Appear Here */
     <div class="alert alert-success">
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
         <i class="fa fa-check-square-o fa-lg"></i>&nbsp;@successMessage
     </div>
 }
@@ -126,57 +203,158 @@
     </div>
 }
 
-<form method="post" class="form-horizontal">
-    @AntiForgery.GetHtml()
-    @Html.ValidationSummary(excludeFieldErrors: true)
+<div class="panel-group" id="accordion">
 
-    <fieldset>
-        <legend>
-        @if (hasLocalAccount) {
-            <text>Change Password Form</text>
-        } else {
-            <text>Set Password Form</text>
-        }
-        </legend>
-        
-            @if (hasLocalAccount) {
-                <div class="form-group">
-                    <label for="currentPassword" @if (!ModelState.IsValidField("currentPassword")) {<text>class="error-label"</text>}class="col-sm-2">Current password</label>
-                    <div class="col-sm-4">
-                    <input type="password" class="form-control" id="currentPassword" name="currentPassword" @Validation.For("currentPassword")/>
-                    @Html.ValidationMessage("currentPassword")
+    <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree">
+            <!-- Header Text -->
+            Personal Information
+        </a>
+      </h4>
+    </div>
+        <div id="collapseThree" class="panel-collapse collapse">
+            <div class="panel-body">
+                <form id="add-user-form" class="form-horizontal" role="form" method="POST">
+                @AntiForgery.GetHtml()
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">First Name:</label>
+                        <div class="col-sm-4">
+                            <input type="text" class="form-control" name="fullname" value="@fullname" required  />
+                            @Html.ValidationMessage("fullname")
+                        </div>
                     </div>
-                </div>
-            }
-            <div class="form-group">
-                <label for="newPassword" @if (!ModelState.IsValidField("newPassword")) {<text>class="error-label"</text>} class="col-sm-2">New password</label>
-                <div class="col-sm-4">
-                <input type="password" class="form-control" id="newPassword" name="newPassword" @Validation.For("newPassword")/>
-                @Html.ValidationMessage("newPassword")
-                </div>
-            </div>
 
-            
-            <div class="form-group">
-                <label for="confirmPassword" @if (!ModelState.IsValidField("confirmPassword")) {<text>class="error-label"</text>} class="col-sm-2">Confirm new password</label>
-                <div class="col-sm-4">
-                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" @Validation.For("confirmPassword")/>
-                @Html.ValidationMessage("confirmPassword")
-                </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Last Name:</label>
+                        <div class="col-sm-4">
+                            <input type="text" class="form-control" name="lastname" value="@lastname"  required />
+                            @Html.ValidationMessage("lastname")
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Gender:</label>
+                        <div class="col-sm-4">
+                            <div class="btn-group" data-toggle="buttons">
+                              <label class="btn btn-default @if(gender == "M"){<text>active</text>}">
+                                <input type="radio" name="gender" value="M" required @if(gender == "M"){<text>checked</text>} /> Male
+                              </label>
+                              <label class="btn btn-default @if(gender == "F"){<text>active</text>}">
+                                <input type="radio" name="gender" value="F" required @if(gender == "F"){<text>checked</text>} /> Female
+                              </label>
+                              <label class="btn btn-default @if(gender == "T"){<text>active</text>}">
+                                <input type="radio" name="gender" value="T" required @if(gender == "T"){<text>checked</text>} /> Transgender
+                              </label>
+                              <label class="btn btn-default @if(gender == "G"){<text>active</text>}">
+                                <input type="radio" name="gender" value="G" required @if(gender == "G"){<text>checked</text>} /> Gay
+                              </label>
+                            </div>
+                            <br/>@Html.ValidationMessage("gender")
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Birthdate:</label>
+                        <div class="col-sm-4">
+                        <input type="date" class="form-control" name="birthdate" value="@{ @birthdate.ToString("yyyy-MM-dd") if(birthdate.ToString("yyyy-MM-dd") == "0001-01-01") { <text>YYYY-MM-DD</text> } }" required />
+                            @Html.ValidationMessage("birthdate")
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Email:</label>
+                        <div class="col-sm-4">
+                            <p class="form-control-static">@WebSecurity.CurrentUserName</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-sm-3"></div>
+                        <div class="col-sm-4">
+                            <button type="submit" class="btn btn-default" name="action" value="profile"><i class="fa fa-check-square-o"></i>&nbsp;Save Changes</button>
+                        </div>
+                    </div>
+                </form>
             </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo">
+            <!-- Header Text -->
+            Residential Address
+        </a>
+      </h4>
+    </div>
+        <div id="collapseTwo" class="panel-collapse collapse">
+            <div class="panel-body">
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+            <!-- Header Text -->
+            @if (hasLocalAccount) {
+                <text>Change Password Form</text>
+            } else {
+                <text>Set Password Form</text>
+            }
+        </a>
+      </h4>
+    </div>
+        <div id="collapseOne" class="panel-collapse collapse">
+            <div class="panel-body">
+                <form method="post" class="form-horizontal">
+                    @AntiForgery.GetHtml()
+                    <fieldset>        
+                            @if (hasLocalAccount) {
+                            <div class="form-group @if (!ModelState.IsValidField("currentPassword")) {<text>has-error has-feedback</text>}">
+                                <label for="confirmPassword" class="col-sm-3 control-label">Current password:</label>
+                                    <div class="col-sm-4">
+                                    <input type="password" class="form-control" id="currentPassword" name="currentPassword" @Validation.For("currentPassword")/>
+                                    @Html.ValidationMessage("currentPassword")
+                                    </div>
+                                </div>
+                            }
+                            <div class="form-group @if (!ModelState.IsValidField("newPassword")) {<text>has-error has-feedback</text>}">
+                                <label for="confirmPassword" class="col-sm-3 control-label">New password:</label>
+                                <div class="col-sm-4">
+                                <input type="password" class="form-control" id="newPassword" name="newPassword" @Validation.For("newPassword")/>
+                                @Html.ValidationMessage("newPassword")
+                                </div>
+                            </div>
+
+                            <div class="form-group @if (!ModelState.IsValidField("confirmPassword")) {<text>has-error has-feedback</text>}">
+                                <label for="confirmPassword" class="col-sm-3 control-label">Confirm new password:</label>
+                                <div class="col-sm-4">
+                                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" @Validation.For("confirmPassword")/>
+                                @Html.ValidationMessage("confirmPassword")
+                                </div>
+                            </div>
         
-            <div class="form-group">
-                <div class="col-sm-2"></div>
-                <div class="col-sm-4">
-                @if (hasLocalAccount) {
-                    <button type="submit" class="btn btn-default" name="action" value="password"><i class="fa fa-check-square-o"></i>&nbsp;Change Password</button>
-                } else {
-                    <button type="submit" class="btn btn-default" name="action" value="password"><i class="fa fa-check-square-o"></i>&nbsp;Set Password</button>
-                }
-                </div>
-            </div>
-    </fieldset>
-</form>
+                            <div class="form-group">
+                                <div class="col-sm-3"></div>
+                                <div class="col-sm-4">
+                                @if (hasLocalAccount) {
+                                    <button type="submit" class="btn btn-default" name="action" value="password"><i class="fa fa-check-square-o"></i>&nbsp;Change Password</button>
+                                } else {
+                                    <button type="submit" class="btn btn-default" name="action" value="password"><i class="fa fa-check-square-o"></i>&nbsp;Set Password</button>
+                                }
+                                </div>
+                            </div>
+                    </fieldset>
+                </form>
+                </div> <!-- /.panel-body -->
+            </div> <!-- /. panel-collapse -->
+        </div> <!-- /.panel panel-default -->
+</div> <!-- /.panel-group -->
 
 @if (externalLogins.Count > 0) {
 <section id="externalLogins" class="well">

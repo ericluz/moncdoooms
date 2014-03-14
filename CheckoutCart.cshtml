@@ -1,9 +1,12 @@
-﻿@{
+﻿@{              
     Page.Title = "Checkout";
 
     var db = Database.Open("monco");
     var cartId = Request.QueryString["cartId"].AsInt();
     var commandText = string.Empty;
+
+    // If not logged
+    if (!WebSecurity.IsAuthenticated) { Response.Redirect("~/Account/Login?checkout="+cartId); }
 
     commandText = "SELECT * FROM Cart WHERE CartId=@0";
     var cart = db.QuerySingle(commandText, cartId);
@@ -11,9 +14,6 @@
     // Cart's not found redirect to review cart's page
     if (cart == null) { Response.Redirect("~/ReviewCart"); }
     
-    // If not logged
-    if (!WebSecurity.IsAuthenticated) { Response.Redirect("~/Account/Login?checkout="+cartId); }
-
     commandText = @"SELECT p.ID, p.Name, c.Quantity, c.Price,  c.Quantity * c.Price AS Total, c.CartItemId
         FROM CartItems c INNER JOIN Products p 
         ON c.ProductId = p.Id WHERE c.CartId = @0";
@@ -22,19 +22,61 @@
     var cartTotal = cartItems.Sum(t => (decimal)t.Total);
  
 }
- 
-<h1>Checkout Cart</h1>
 
-<div id="grid" class="table-responsive">
-    @grid.GetHtml(
-        columns: grid.Columns( 
-            grid.Column("Name", "Product Name", format: @<a href="~/Order/@item.ID">@item.Name</a>),
-            grid.Column("Quantity"),
-            grid.Column("Price", "Unit Price", format: @<text>@item.Price.ToString("c")</text>),
-            grid.Column("Price", "Total Price", format: @<text>@item.Total.ToString("c")</text>)
-        )
-    )
+<div class="row">
+    <div class="col-md-12">
+    <h3>Checkout: <small>Review order</small></h3>
+    <hr>
+    </div>
 </div>
+
+<div class="row">
+    <div class="col-md-12">
+    
+    <div class="col-md-8">
+    
+        <div class="row">
+
+            <div class="col-md-6">
+                <h5><strong><i class="fa fa-home fa-lg" style="vertical-align: middle;"></i>&nbsp;Ship to</strong></h5>
+                <address>
+                  <strong>Full Name</strong><br>
+                  Street Address 1<br>
+                  Street Address 2 (optional)<br>
+                  City & Postal<br>
+                  Country<br>
+                  <abbr title="Phone">P:</abbr> (123) 456-7890
+                </address>
+            </div>
+
+            <div class="col-md-6">
+                <h5><strong><i class="fa fa-money fa-lg" style="vertical-align: middle;"></i>&nbsp;Pay with</strong></h5>
+            </div>
+
+        </div>
+
+        <div class="row">
+            <div id="grid" class="table-responsive col-md-12">
+                @grid.GetHtml(
+                    columns: grid.Columns( 
+                        grid.Column("Name", "Product Name", format: @<a href="~/Order/@item.ID">@item.Name</a>),
+                        grid.Column("Quantity"),
+                        grid.Column("Price", "Unit Price", format: @<text>@item.Price.ToString("c")</text>),
+                        grid.Column("Price", "Total Price", format: @<text>@item.Total.ToString("c")</text>)
+                    )
+                )
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+    <hr>
+
+    </div>
+
+    </div> <!-- /.col-md-12 -->
+
+</div> <!-- /.row -->
 
 @section scripts{
 <script>

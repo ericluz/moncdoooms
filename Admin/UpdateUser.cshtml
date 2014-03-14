@@ -54,8 +54,9 @@
     }
     else {
         var selectQuery_UserInfo = "SELECT * FROM UserProfile WHERE UserId=@0";
-        var extendedQuery_UserInfo = "SELECT * FROM webpages_Membership WHERE UserId=@0";
         var row = db.QuerySingle(selectQuery_UserInfo, UserId);
+
+        var extendedQuery_UserInfo = "SELECT * FROM webpages_Membership WHERE UserId=@0";
         var row_ext = db.QuerySingle(extendedQuery_UserInfo, UserId);
 
         fullname = row.FirstName;
