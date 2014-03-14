@@ -2,7 +2,7 @@
     Layout = "~/_AdminLayout.cshtml";
     Page.Title = "User Management";
 
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
     var selectQueryString = "SELECT * FROM UserProfile";
     var extendedSingleUserProfileQueryString = "SELECT * FROM webpages_Membership WHERE UserId=@0";
     var extendedSingleUserRoleQueryString = "SELECT webpages_Roles.RoleName FROM webpages_Roles INNER JOIN webpages_UsersInRoles ON webpages_Roles.RoleId=webpages_UsersInRoles.RoleId WHERE webpages_UsersInRoles.UserId=@0";
@@ -60,8 +60,8 @@
                                         
                                         @* Get the category name of each product *@
                                         var extendedRow = db.QuerySingle(extendedSingleUserProfileQueryString, row.UserId);
-                                        var userRole = db.QueryValue(extendedSingleUserRoleQueryString, row.UserId);
-
+                                        var userRole = db.QueryValue(extendedSingleUserRoleQueryString, row.UserId);                                        
+                                        var getOAuth = db.QuerySingle("SELECT * FROM webpages_OAuthMembership WHERE UserId=@0", row.UserId);
                                         <tr>
                                             <td>@row.UserId</td>
                                             <td>@row.Email</td>
@@ -69,6 +69,7 @@
                                             <td>@extendedRow.CreateDate</td>
                                             <td>@userRole</td>
                                             <td class="text-right">
+                                                @if(getOAuth != null){<span class="label label-success"><i class="fa fa-link fa-1x"></i>&nbsp;OAuth</span>}
                                                 <div class="btn-group">
                                                 <a style="text-decoration: none;" role="button" class="btn btn-primary btn-xs" href="@Href("~/Admin/UpdateUser", row.UserId)" title="Update User Info"><i class="fa fa-pencil-square-o"></i>&nbsp;
                                                 </a>

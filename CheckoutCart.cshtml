@@ -1,7 +1,7 @@
 ﻿@{              
     Page.Title = "Checkout";
 
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
     var cartId = Request.QueryString["cartId"].AsInt();
     var commandText = string.Empty;
 

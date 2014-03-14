@@ -5,7 +5,7 @@
         Response.Redirect("~/");
     }
 
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
     var cartId = Request.Cookies["cart"].Value.AsInt();
     var commandText = string.Empty;
     

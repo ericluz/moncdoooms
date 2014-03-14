@@ -6,7 +6,7 @@
 @{
     Page.Title = "Place Your Order";
 
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
     var productId = UrlData[0].AsInt();
     var price = Request["price"].AsDecimal();
     var quantity = Request["orderQty"].AsInt();

@@ -38,7 +38,7 @@
         // If all information is valid, create a new account
         if(ModelState.IsValid) {
             // Open database
-            var db = Database.Open("monco");
+            var db = Database.Open("tierone");
             
             // Check if user already exists
             var user = db.QuerySingle("SELECT Email FROM UserProfile WHERE LOWER(Email) = LOWER(@0)", email);

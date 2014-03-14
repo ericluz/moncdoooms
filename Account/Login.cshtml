@@ -14,7 +14,7 @@
     var rememberMe = false;
     
     // Handles cart checkout redirect
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
     var cartId = Request.QueryString["checkout"];
     var commandText = "SELECT * FROM Cart WHERE CartId=@0";
     var cart = db.QuerySingle(commandText, cartId);

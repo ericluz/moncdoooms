@@ -2,7 +2,7 @@
     Layout = "~/_AdminLayout.cshtml";
     Page.Title = "User Management / Delete Account";
 
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
     var UserId = UrlData[0];
     
     if (UserId.IsEmpty()) {
@@ -64,7 +64,7 @@
                 </tr>
                 <tr>
                     <td colspan="3">
-                        @UserInfo.Address1 @UserInfo.Address2, @UserInfo.City, @UserInfo.State
+                        @UserInfo.Address @UserInfo.Address2, @UserInfo.City, @UserInfo.State
                     </td>
                 </tr>
                 <tr>

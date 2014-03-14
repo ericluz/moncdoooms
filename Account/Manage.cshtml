@@ -6,11 +6,23 @@
     <script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
 
     <script>
-    $(document).ready(function () {
-        $("#accordion").on('shown.bs.collapse', function () {
-            //$.cookie('accordion', 'the_value', { expires: 1, path: '/' });
+        $(document).ready(function () {
+            var animateClass = 'animated half rotateInDownRight';
+
+            setTimeout(function () {
+                $('div .panel:eq(0)').addClass(animateClass);
+            }, 100);
+            setTimeout(function () {                
+                $('div .panel:eq(1)').addClass(animateClass);
+            }, 300);
+            setTimeout(function () {
+                $('div .panel:eq(2)').addClass(animateClass);
+            }, 500);
+
+            $("#accordion").on('shown.bs.collapse', function () {
+                //$.cookie('accordion', 'the_value', { expires: 1, path: '/' });
+            });
         });
-    });
     </script>
 }
 
@@ -21,7 +33,7 @@
     Page.Title = "Manage Account";
 
     var action = Request.Form["action"];
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
 
     // Initialize variables for user profile update operation
     var fullname = "";
@@ -33,7 +45,7 @@
     bool hasLocalAccount = OAuthWebSecurity.HasLocalAccount(WebSecurity.CurrentUserId);
 
     // Query for current user profile info then display in the follow fields
-    if (hasLocalAccount && !IsPost) {
+    if (hasLocalAccount) {
         var queryUserProfile = "SELECT * FROM UserProfile WHERE UserId=@0";
         var UserProfile = db.QuerySingle(queryUserProfile, WebSecurity.CurrentUserId);        
 
@@ -43,14 +55,21 @@
         birthdate = Convert.ToDateTime(UserProfile.BirthDate);
     }
 
-    string successMessage = "";
+    string successMessage = String.Empty;
+    string errorMessage = String.Empty;
     var message = Request.QueryString["message"];
     if (message == "ChangedPassword") {
-        successMessage = "Your password has been changed.";
+        successMessage = "Password change success.";
     } else if (message == "SetPassword") {
-        successMessage = "Your password has been set.";
+        successMessage = "Setting password completed.";
     } else if (message == "RemovedLogin") {
         successMessage = "The external login was removed.";
+    } else if (message == "ChangePasswordFailed") {
+        errorMessage = "Password change failed.";
+    } else if (message == "UpdatedProfile") {
+        successMessage = "Profile update success.";
+    } else if (message == "UpdateProfileFailed") {
+        errorMessage = "Profile update failed, please try it again.";
     }
 
     var externalLogins =
@@ -60,8 +79,8 @@
         .ToList();
     bool canRemoveLogin = externalLogins.Count > 1 || hasLocalAccount;
 
-    // To avoid conflict validation on user profile
     if (action != "profile") {
+    // To avoid conflict validation on user profile
     Validation.RequireField("newPassword", "The new password field is required.");
     Validation.Add("confirmPassword",
         Validator.Required("The confirm new password field is required."),
@@ -103,9 +122,13 @@
                     if(checkUpdateId.Count() == 1) {
                         var commandText = "UPDATE UserProfile SET FirstName=@0, LastName=@1, Gender=@2, BirthDate=@3 WHERE UserId=@4";
                         db.Execute(commandText, fullname, lastname, gender, birthdate, updateId);
+
+                        Response.Redirect("~/Account/Manage?message=UpdatedProfile");
+                        return;   
                     } else {
                         // Add error if userId is not found
-                        ModelState.AddFormError("A problem occur while petching your information, Please try it again.");
+                        Response.Redirect("~/Account/Manage?message=UpdateProfileFailed");
+                        return;   
                     }
                 }
             } else {
@@ -135,7 +158,8 @@
                         Response.Redirect("~/Account/Manage?message=ChangedPassword");
                         return;
                     } else {
-                        ModelState.AddFormError("An error occurred when attempting to change the password. Please try again.");
+                        Response.Redirect("~/Account/Manage?message=ChangePasswordFailed");
+                        return;
                     }
                 } else {
                     bool requireEmailConfirmation = !WebMail.SmtpServer.IsEmpty();
@@ -148,7 +172,7 @@
                     }
                 }
             } else {
-                ModelState.AddFormError("Password change was unsuccessful. Please correct the errors and try again.");
+                Response.Redirect("~/Account/Manage?message=ChangePasswordFailed");
             }
         } else if (action == "removeLogin") {
             // Remove external login
@@ -192,6 +216,15 @@
         <i class="fa fa-check-square-o fa-lg"></i>&nbsp;@successMessage
     </div>
 }
+@if (!errorMessage.IsEmpty()) {
+    /* Failed Message Appear Here */
+    <div class="alert alert-danger">
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+        <i class="fa fa-exclamation-triangle fa-lg"></i>&nbsp;@errorMessage
+    </div>
+}
+
+
 
 <p>You're logged in as: <strong>@WebSecurity.CurrentUserName</strong></p>
 
@@ -199,7 +232,7 @@
     /* Display something if user has local password */
 } else {
     <div class="alert alert-danger">
-        <sup><i class="fa fa-quote-left"></i></sup>You do not have a local password<sup><i class="fa fa-quote-right"></i></sup> for this site. Add a local password so you can log in without an external login.
+        <i class="fa fa-exclamation-triangle"></i>&nbsp;IMPORTANT: Set your Password before doing anytime.
     </div>
 }
 
@@ -363,11 +396,11 @@
             <tbody>
             @foreach (var externalLogin in externalLogins) {
                 <tr>
-                    <td class="col-sm-1">
+                    <td class="col-sm-2">
                         @if (canRemoveLogin) {
                             <form method="post">
                                 @AntiForgery.GetHtml()
-                                <button type="submit" class="btn btn-default btn-block btn-sm" name="action" value="removeLogin" title="Remove this @externalLogin.ProviderDisplayName credential from your account"><i class="fa fa-trash-o"></i>&nbsp;Remove</button>
+                                <button type="submit" class="btn btn-danger btn-block" name="action" value="removeLogin" title="Remove @externalLogin.ProviderDisplayName credential from your account"><i class="fa fa-minus-circle fa-lg"></i>&nbsp;Cancel Credentials</button>
                                 <input type="hidden" name="provider" value="@externalLogin.Provider" />
                                 <input type="hidden" name="userId" value="@externalLogin.UserId" />
                             </form>
@@ -375,7 +408,11 @@
                             @: &nbsp;
                         }
                     </td>
-                    <td>@externalLogin.ProviderDisplayName</td>
+                    <td class="col-sm-10">
+                        <div class="form-group has-success has-feedback">
+                          <input class="form-control" value="@externalLogin.ProviderDisplayName" readonly="readonly" />
+                        </div>
+                    </td>
                 </tr>
             }
             </tbody>

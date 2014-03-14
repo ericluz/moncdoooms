@@ -2,7 +2,7 @@
     Layout = "~/_AdminLayout.cshtml";
     Page.Title = "Inventory Management / Delete Product";
     
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
     var ProductId = UrlData[0];
     
     if (ProductId.IsEmpty()) {

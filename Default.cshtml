@@ -2,7 +2,7 @@
     Page.Title = "Home";
 
     // Using database helper
-    var db = Database.Open("monco");
+    var db = Database.Open("tierone");
     var products = db.Query("SELECT * FROM PRODUCTS").ToList();
     
     // This variable will be used to show random featured products
