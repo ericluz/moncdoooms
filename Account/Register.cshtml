@@ -98,61 +98,63 @@
 
 <div class="row">
 
-    <div class="col-md-6"></div>
     <div class="col-md-6">
-<form class="form-horizontal" method="POST" role="form">
-    @AntiForgery.GetHtml()
-    @* If at least one validation error exists, notify the user *@
-    @Html.ValidationSummary("Account creation was unsuccessful. Please correct the errors and try again.", excludeFieldErrors: true, htmlAttributes: null)
+    <form class="form-horizontal" method="POST" role="form">
+        @AntiForgery.GetHtml()
+        @* If at least one validation error exists, notify the user *@
+        @Html.ValidationSummary("Account creation was unsuccessful. Please correct the errors and try again.", excludeFieldErrors: true, htmlAttributes: null)
 
-    <fieldset>
-        <legend>Create a new account</legend>
-            <div class="form-group">
-                <label class="col-sm-4">Full Name</label>
-                <div class="col-sm-8">
-                    <input type="text" class="form-control" name="fullname" value="@fullname" @Validation.For("fullname") required />
-                    @Html.ValidationMessage("fullname")
+        <fieldset>
+            <legend>Create a personal account</legend>
+                <div class="form-group">
+                    <label class="col-sm-4">Full Name</label>
+                    <div class="col-sm-8">
+                        <input type="text" class="form-control" name="fullname" value="@fullname" @Validation.For("fullname") required />
+                        @Html.ValidationMessage("fullname")
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label for="email" class="col-sm-4">Email @if(!ModelState.IsValidField("email")){<text>*</text>}</label>
-                <div class="col-sm-8">
-                <input type="email" class="form-control" id="email" name="email" value="@email" @Validation.For("email") required />
-                @* Write any email validation errors to the page *@
-                @Html.ValidationMessage("email")
+                <div class="form-group">
+                    <label for="email" class="col-sm-4">Email @if(!ModelState.IsValidField("email")){<text>*</text>}</label>
+                    <div class="col-sm-8">
+                    <input type="email" class="form-control" id="email" name="email" value="@email" @Validation.For("email") required />
+                    @* Write any email validation errors to the page *@
+                    @Html.ValidationMessage("email")
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label for="password" class="col-sm-4">Password @if(!ModelState.IsValidField("email")){<text>*</text>}</label>
-                <div class="col-sm-8">
-                <input type="password" class="form-control" id="password" name="password" @Validation.For("password") required />
-                @* Write any password validation errors to the page *@
-                @Html.ValidationMessage("password")
+                <div class="form-group">
+                    <label for="password" class="col-sm-4">Password @if(!ModelState.IsValidField("email")){<text>*</text>}</label>
+                    <div class="col-sm-8">
+                    <input type="password" class="form-control" id="password" name="password" @Validation.For("password") required />
+                    @* Write any password validation errors to the page *@
+                    @Html.ValidationMessage("password")
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label for="confirmPassword" class="col-sm-4">Confirm password @if(!ModelState.IsValidField("email")){<text>*</text>}</label>
-                <div class="col-sm-8">
-                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" @Validation.For("confirmPassword") required />
-                @* Write any password validation errors to the page *@
-                @Html.ValidationMessage("confirmPassword")
+                <div class="form-group">
+                    <label for="confirmPassword" class="col-sm-4">Confirm password @if(!ModelState.IsValidField("email")){<text>*</text>}</label>
+                    <div class="col-sm-8">
+                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" @Validation.For("confirmPassword") required />
+                    @* Write any password validation errors to the page *@
+                    @Html.ValidationMessage("confirmPassword")
+                    </div>
                 </div>
-            </div>
             
-            <div class="form-group">
-                <label class="col-sm-4">Prove you're not a Robot</label>
-                <div class="col-sm-8">@ReCaptcha.GetHtml()</div>
-            </div>                            
+                <div class="form-group">
+                    <label class="col-sm-4">Prove you're not a Robot</label>
+                    <div class="col-sm-8">@ReCaptcha.GetHtml()</div>
+                </div>                            
             
             
-            <div class="form-group">
-             <label class="col-sm-4"></label>
-                <div class="col-sm-8"><button type="submit" class="btn btn-primary btn-lg">Create this Account</button></div>
-            </div>
-    </fieldset>
-</form>
+                <div class="form-group">
+                 <label class="col-sm-4"></label>
+                    <div class="col-sm-8"><button type="submit" class="btn btn-success btn-lg">Sign Up</button></div>
+                </div>
+        </fieldset>
+    </form>
     </div>
+
+    <div class="col-md-6"></div>
+
 </div><!-- end of /.row -->

@@ -18,55 +18,90 @@
     var product = db.QuerySingle(commandText, productId);
     var images = db.QuerySingle("SELECT FileTitle, FileExtension FROM Products_Image WHERE ForProductId=@0", product.Id); 
     var categories = db.QuerySingle("SELECT * FROM Products_Category WHERE Id=@0", product.CategoryId);
-    var checkInventory = db.QuerySingle("SELECT SUM(Quantity) as totalStock FROM Products_Inventory WHERE ProductId=@0", product.Id);
+    var checkInventory = db.QuerySingle("SELECT SUM(Quantity) as availableStock FROM Products_Inventory WHERE ProductId=@0", product.Id);
+
+    // Setup validation
+    Validation.RequireField("orderQty", "Please a quantity of your Order.");
 
     if (product == null) {
         Response.Redirect("~/");
     }
 
-    // When cart cookies is set (not expired)
-    if(Request.Cookies["cart"] != null) {
+    if (IsPost) {
+    AntiForgery.Validate();
+
+    // When "cart" cookies does not exist
+    if(Request.Cookies["cart"] == null) {
+        
+        // Insert new cart info to database
+        commandText = "INSERT INTO Cart (DateCreated) VALUES (GetDate())";
+        db.Execute(commandText);
+        cartId = (int)db.GetLastInsertId();
+
+        // Check if quantity of products to be added is less than or equal to available stock
+        if (quantity <= checkInventory.availableStock) {
+            
+            // Now insert additional cart info to database
+            commandText = "INSERT INTO CartItems (CartId, ProductId, Quantity, Price) VALUES (@0, @1, @2, @3)";
+            db.Execute(commandText, cartId, productId, quantity, price);
+            
+            // Update user's cart count display
+            totalItems += quantity;
+
+        } else {
+            // Inform user that the quantity of products he set is too much compared to available stock
+            ModelState.AddFormError("Oopss! We cannot process your request please try it again...");
+        }
+
+    } else if(Request.Cookies["cart"] != null) { /* When "cart" cookies exist */
+        
+        // Setup cartId from cookies
         cartId = Request.Cookies["cart"].Value.AsInt();
-        commandText = "SELECT SUM(Quantity) AS TotalItems FROM CartItems WHERE CartId = @0";
-        object result = db.QueryValue(commandText, cartId);
-        totalItems = result == DBNull.Value ? 0 : Convert.ToInt32(result);
+
+        // Check for the product in cart database if exist
+        commandText = "SELECT SUM(Quantity) as Total FROM CartItems WHERE CartId=@0 AND ProductId=@1";
+        var checkItem = db.QuerySingle(commandText, cartId, productId);
+        
+        // Product found in the cart database
+        if(checkItem != null) {
+                        
+            // Now check it quantity of producs already in cert plus(+) quantity of added product is not higher than available stock
+            if ((Convert.ToInt32(checkItem.Total) + quantity) <= checkInventory.availableStock) {
+                
+                // Now insert additional cart info to database
+                commandText = "INSERT INTO CartItems (CartId, ProductId, Quantity, Price) VALUES (@0, @1, @2, @3)";
+                db.Execute(commandText, cartId, productId, quantity, price);
+
+                // Update user's cart count display
+                totalItems += quantity;
+
+            } else {
+                // Inform user that the quantity of products he set is too much compared to available stock
+                ModelState.AddFormError("Oopss! We cannot process your request please try it again...");                
+            }
+
+        } else { // Product is not in the cart
+            
+            if ((Convert.ToInt32(checkItem.Total) + quantity) <= checkInventory.availableStock) {
+                
+                // Now insert additional cart info to database
+                commandText = "INSERT INTO CartItems (CartId, ProductId, Quantity, Price) VALUES (@0, @1, @2, @3)";
+                db.Execute(commandText, cartId, productId, quantity, price);
+
+                // Update user's cart count display
+                totalItems += quantity;
+
+            } else {
+                // Inform user that the quantity of products he set is too much compared to available stock
+                ModelState.AddFormError("Oopss! We cannot process your request please try it again...");                
+            }
+        }
     }
 
-    // Setup validation
-    Validation.RequireField("orderQty", "Please a quantity of your Order.");
-
-    if (quantity > checkInventory.totalStock) {
-        ModelState.AddFormError("You have entered a Quantity that is higher to our current stock, please try it again.");
-    }
-
-    // When form is submitted and entered quantity is not not higher than available stock
-    if(IsPost && quantity <= checkInventory.totalStock) {
-        AntiForgery.Validate();
-
-        // When found no cart cookies
-        if(Request.Cookies["cart"] == null) {
-            commandText = "INSERT INTO Cart (DateCreated) VALUES (GetDate())";
-            db.Execute(commandText);
-            cartId = (int)db.GetLastInsertId();
-        }
-
-        commandText = "SELECT Quantity FROM CartItems WHERE CartId = @0 AND ProductId = @1";
-        var reduction = db.QueryValue(commandText, cartId, productId);
-        if(reduction != null){
-            totalItems -= reduction;
-        }
-
-        commandText = "DELETE FROM CartItems WHERE CartId = @0 AND ProductId = @1";
-        db.Execute(commandText, cartId, productId);
-
-        commandText = "INSERT INTO CartItems (CartId, ProductId, Quantity, Price) VALUES (@0, @1, @2, @3)";
-        db.Execute(commandText, cartId, productId, quantity, price);
-
-        totalItems += quantity;
-
+        // Initialize cookie value
         Response.Cookies["cart"].Value = cartId.ToString();
-        Response.Cookies["cart"].Expires = DateTime.Now.AddDays(1); // Set to expire this after 1 day
-    }
+        Response.Cookies["cart"].Expires = DateTime.Now.AddHours(3); // Set to expire this after 3 Hours
+    } /* end of IsPost checking */   
 }
 
 <div class="row">
@@ -93,10 +128,10 @@
         <div class="">
             <h4>Price: <strong class="text-danger">@String.Format("{0:c}", product.Price)</strong></h4>
             @{
-                if(checkInventory.totalStock == null || checkInventory.totalStock < 1) {
+                if(checkInventory.availableStock == null || checkInventory.availableStock < 1) {
                     <h4 class="text-danger">Out of stock.</h4>        
                 } else {
-                    <h4 class="text-success"><small class="text-muted">available: @checkInventory.totalStock</small> In stock.</h4>
+                    <h4 class="text-success"><small class="text-muted">available: @checkInventory.availableStock</small> In stock.</h4>
                 }
             }            
         </div>
@@ -117,7 +152,7 @@
             <div class="form-group">
                 <label class="col-sm-5 control-label">Quantity</label>
                 <div class="col-sm-7">
-                <input type="text" class="form-control" id="orderQty" min="1" max="@checkInventory.totalStock" name="orderQty" pattern="{4}" value="@(quantity == 0 ? 1 : quantity)"/>
+                <input type="text" class="form-control" id="orderQty" min="1" max="@checkInventory.availableStock" name="orderQty" pattern="{4}" value="@(quantity == 0 ? 1 : quantity)"/>
                 </div>
                 <div class="col-sm-12">
                     @Html.ValidationMessage("orderQty")
@@ -130,7 +165,7 @@
             </div>
 
             <div class="form-group">
-                    <div class="col-sm-12 form-control">
+                    <div class="col-sm-12">
                     Total:<span class="pull-right" id="orderTotal">@string.Format("{0:f}", quantity == 0 ? product.Price : quantity * product.Price)</span>
                     </div>
             </div>
@@ -140,7 +175,7 @@
                     <input type="hidden" name="productId" value="@product.Id" />
                     <input type="hidden" name="price" value="@product.Price" />
                     @{
-                        if(checkInventory.totalStock == null || checkInventory.totalStock < 1) {
+                        if(checkInventory.availableStock == null || checkInventory.availableStock < 1) {
                             <h4 class="text-danger">We are already out of stock, kindly contact us to inform that you are interested in this product.</h4>
                         } else {
                             <button type="submit" class="btn btn-default btn-block"><i class="fa fa-shopping-cart"></i> &nbsp;Add to Cart</button>
@@ -153,7 +188,7 @@
                 <div class="col-sm-12">
                     @if(totalItems > 0){
                         var itemtxt = (totalItems == 1) ? "item" : "items" ;
-                        <text>Your cart contain <strong>@totalItems</strong> @itemtxt</text>
+                        <text><strong>@totalItems</strong> @itemtxt added to cart.</text>
                     }
                 </div>
             </div>

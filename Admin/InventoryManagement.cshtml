@@ -46,8 +46,9 @@
                                             <th class="col-md-1">PID</th>
                                             <th class="col-md-3">Name</th>
                                             <th class="col-md-2">Category</th>
-                                            <th class="col-md-2">Stock</th>
-                                            <th class="col-md-2">Price <small>(UNIT)</small></th>
+                                            <th class="col-md-2">Quantity</th>
+                                            <th class="col-md-1">Status</th>
+                                            <th class="col-md-1">Price</th>
                                             <th class="col-md-2"></th>
                                         </tr>
                                     </thead>
@@ -65,18 +66,25 @@
                                             <td>@row.Id</td>
                                             <td>@row.Name</td>
                                             <td>@productCategory</td>
-                                            <td class="text-right">@if (DBNull.Value.Equals(productInventory)){
-                                                    <text><span class="label label-danger">No Record</span></text>
+                                            <td>
+                                                @productInventory
+                                            </td>
+                                            <td class="text-right">
+                                                @if (DBNull.Value.Equals(productInventory)) {
+                                                    <span class="label label-danger">No Stock</span>
                                                 } 
                                                 else if(productInventory == 0) {
-                                                    <text><span class="label label-warning">Out of Stock</span></text>
+                                                    <span class="label label-warning">Sold out</span>
                                                 } 
-                                                else {@productInventory}</td>
+                                                else {
+                                                    <span class="label label-success">In Stock</span>
+                                                }
+                                            </td>
                                             <td class="text-right">@String.Format("{0:c}", row.Price)</td>
                                             <td class="text-right">
                                                 <div class="btn-group">
                                                 <a style="text-decoration: none;" role="button" class="btn btn-success btn-xs" href="@Href("~/Admin/AddInventory", row.Id)" title="Add Inventory"><i class="fa fa-plus"></i>&nbsp;
-                                                re-stock</a>
+                                                Re-Stock</a>
                                                 <a style="text-decoration: none;" role="button" class="btn btn-primary btn-xs" href="@Href("~/Admin/UpdateProduct", row.Id)" title="Update Product"><i class="fa fa-pencil-square-o"></i>&nbsp;
                                                 </a>
                                                 <a style="text-decoration: none;" role="button" class="btn btn-danger btn-xs" href="@Href("~/Admin/DeleteProduct", row.Id)" title="Delete Product"><i class="fa fa-trash-o"></i>&nbsp;

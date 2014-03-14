@@ -24,7 +24,7 @@
 
 @if(cartItems.Count() > 0) {
 <h1>Review Your Cart</h1>
-<p>&nbsp;</p>
+
 <div id="grid" class="table-responsive">
 @grid.GetHtml(
     columns: grid.Columns( 
@@ -38,8 +38,10 @@
                                 </form>)
     )
 )
+
+<a class="btn btn-primary" href="~/CheckoutCart?CartId=@cartId">Proceed Checkout</a>
 </div>
-<p>&nbsp;</p>
+
 } else {
     <text><h1>Your Shopping Cart is empty.</h1></text>
 }

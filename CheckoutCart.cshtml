@@ -1,0 +1,50 @@
+﻿@{
+    Page.Title = "Checkout";
+
+    var db = Database.Open("monco");
+    var cartId = Request.QueryString["cartId"].AsInt();
+    var commandText = string.Empty;
+
+    commandText = "SELECT * FROM Cart WHERE CartId=@0";
+    var cart = db.QuerySingle(commandText, cartId);
+
+    // Cart's not found redirect to review cart's page
+    if (cart == null) { Response.Redirect("~/ReviewCart"); }
+    
+    // If not logged
+    if (!WebSecurity.IsAuthenticated) { Response.Redirect("~/Account/Login?checkout="+cartId); }
+
+    commandText = @"SELECT p.ID, p.Name, c.Quantity, c.Price,  c.Quantity * c.Price AS Total, c.CartItemId
+        FROM CartItems c INNER JOIN Products p 
+        ON c.ProductId = p.Id WHERE c.CartId = @0";
+    var cartItems = db.Query(commandText, cartId);
+    var grid = new WebGrid(cartItems, canPage: false, canSort: false);
+    var cartTotal = cartItems.Sum(t => (decimal)t.Total);
+ 
+}
+ 
+<h1>Checkout Cart</h1>
+
+<div id="grid" class="table-responsive">
+    @grid.GetHtml(
+        columns: grid.Columns( 
+            grid.Column("Name", "Product Name", format: @<a href="~/Order/@item.ID">@item.Name</a>),
+            grid.Column("Quantity"),
+            grid.Column("Price", "Unit Price", format: @<text>@item.Price.ToString("c")</text>),
+            grid.Column("Price", "Total Price", format: @<text>@item.Total.ToString("c")</text>)
+        )
+    )
+</div>
+
+@section scripts{
+<script>
+    $(function () {
+        $("#grid table").addClass("table table-striped table-bordered"); 
+        
+        var html = '<tfoot><tr><td colspan="3"><strong>Total</strong></td><td>';
+        html += '<strong>@cartTotal.ToString("c")</strong>'
+        html += '</td></tr></tfoot>';
+        $('table').append(html);
+    });
+</script>
+}

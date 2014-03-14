@@ -12,11 +12,23 @@
     var email = "";
     var password = "";
     var rememberMe = false;
+    
+    // Handles cart checkout redirect
+    var db = Database.Open("monco");
+    var cartId = Request.QueryString["checkout"];
+    var commandText = "SELECT * FROM Cart WHERE CartId=@0";
+    var cart = db.QuerySingle(commandText, cartId);
 
     var returnUrl = Request.QueryString["ReturnUrl"];
     if (returnUrl.IsEmpty()) {
-        // Some external login providers always require a return URL value
-        returnUrl = Href("~/");
+
+        // For login with checkout redirects
+        if (cartId != null) {
+            returnUrl = Href("~/?ContinueCheckout="+cartId);
+        } else { // Normal login
+            // Some external login providers always require a return URL value
+            returnUrl = Href("~/");
+        }
     }
 
     // Setup validation
@@ -57,6 +69,17 @@
     }
 }
 
+@if(cart != null) {
+<div class="row">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <i class="fa fa-lock fa-lg"></i>&nbsp;&nbsp;Please Login your account to continue to checkout product, or Register if you don't have one.
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+        </div>
+    </div>
+</div>
+}
+
 <hgroup class="title">
     <h1>@Page.Title</h1>
 </hgroup>
@@ -77,7 +100,7 @@
         @Html.ValidationSummary("Log in was unsuccessful. Please correct the errors and try again.", excludeFieldErrors: true, htmlAttributes: null)
         
         <fieldset>
-            <legend>Sign in to Your Account</legend>
+            <legend>Account Login</legend>
 
              <div class="form-group">
                     <label for="email" @if (!ModelState.IsValidField("email"))
@@ -101,7 +124,9 @@
                 </label>
             </div>
             
-            <button type="submit" class="btn btn-primary">Submit</button>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa fa-sign-in fa-lg"></i>&nbsp;&nbsp;Log in
+            </button>
         </fieldset>
     </form>
     <br />

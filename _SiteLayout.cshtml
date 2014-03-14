@@ -23,7 +23,7 @@
 
         <!-- Core CSS - Include with every page -->
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" /> <!-- Bootstrap CSS -->
-        <link href="http://bootswatch.com/lumen/bootstrap.min.css" rel="stylesheet" /> <!-- Bootstrap Customer theme -->
+        <!--<link href="http://bootswatch.com/simplex/bootstrap.min.css" rel="stylesheet" /> <!-- Bootstrap Customer theme -->
         
         <!-- Easy ways to get Font Awesome 4.0.3 onto your website -->
         <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet" />
@@ -41,6 +41,7 @@
         <!-- Bootstrap Javajscript - CDN -->
         <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script> 
        
+        <script src="~/Scripts/jquery.cookie.js"></script>
         <script src="~/Scripts/monco.admin.js"></script>
         <!-- RenderSection Scripts / To minimize the load on browser include page only scripts -->
         @RenderSection("Scripts", required: false)
@@ -48,7 +49,7 @@
     <body>
         <div id="page">
             <header>
-                <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+                <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
                     <div class="container">
                         <div class="navbar-header">
                             <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
@@ -63,16 +64,16 @@
                         <!-- Collect the nav links, forms, and other content for toggling -->
                         <div class="collapse navbar-collapse navbar-ex1-collapse">
                             <ul class="nav navbar-nav">
-                                <li><a href="~/">Home</a></li>
-                                <li><a href="#products">Products</a></li>
-                                <li><a href="~/About">About Us</a></li>
-                                <li><a href="#contact">Contact Us</a></li>
+                                <li><a href="~/"><i class="fa fa-home fa-lg"></i>&nbsp;HOME</a></li>
+                                <li><a href="#products"><i class="fa fa-lemon-o fa-lg"></i>&nbsp;PRODUCTS</a></li>
+                                <li><a href="~/About"><i class="fa fa-lightbulb-o fa-lg"></i>&nbsp;ABOUT US</a></li>
+                                <li><a href="#contact"><i class="fa fa-envelope-o fa-lg"></i>&nbsp;CONTACT</a></li>
                             </ul>
 
                             <!-- Login portion of navbar -->
                             <ul class = "nav navbar-nav navbar-right">
                                 <li><a href="~/ReviewCart">
-                                    <i class="fa fa-shopping-cart fa-lg"></i>&nbsp;
+                                    <i id="useToAnimateCart" class="fa fa-shopping-cart fa-lg"></i>&nbsp;
                                     Cart (@totalItems)</a></li>
 
                                 @if (WebSecurity.IsAuthenticated) {
@@ -87,12 +88,12 @@
                                                         <text>
                                                         <li>
                                                             <a class="email" href="~/Admin/Admin" title="Admin Panel">
-                                                            <span class="fa fa-lock"></span>&nbsp;
+                                                            <span class="fa fa-lock fa-lg"></span>&nbsp;
                                                             Admin Panel</a>
                                                         </li>
                                                         </text>
                                                     }
-                                                    <li><a href="~/Account/Manage"><i class="fa fa-user"></i>&nbsp;
+                                                    <li><a href="~/Account/Manage"><i class="fa fa-user fa-lg"></i>&nbsp;
                                                         Profile</a>
                                                     </li>
                                                     <li class="divider"></li>
@@ -101,7 +102,7 @@
                                                                         @AntiForgery.GetHtml()
                                                                         </form>
                                                                         <a href="javascript:document.getElementById('logoutForm').submit()">
-                                                                        <i class="fa fa-sign-out"></i>&nbsp;
+                                                                        <i class="fa fa-sign-out fa-lg"></i>&nbsp;
                                                                         Logout</a>
                                                     </li>
                                                 </ul>
@@ -110,11 +111,15 @@
                                             <!-- /.dropdown -->
                                     </text>
                                 } else {
-                                    <li><a href="~/Account/Register">Register</a></li>
+                                    <li>
+                                        <a href="~/Account/Register">
+                                        <i class="fa fa-pencil fa-lg"></i>&nbsp;&nbsp;Sign up
+                                        </a>
+                                    </li>
                                     <li class="dropdown">
-                                    <a class="dropdown-toggle" href="~/Account/Login">
-                                        <i class="fa fa-sign-in"></i>&nbsp;
-                                        Sign In</a>
+                                        <a class="dropdown-toggle" href="~/Account/Login">
+                                        <i class="fa fa-sign-in fa-lg"></i>&nbsp;&nbsp;Log in
+                                        </a>
                                     </li>
                                 }
                                 
