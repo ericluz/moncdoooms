@@ -15,16 +15,11 @@
     var category = "";
     var description = "";
     var price = Decimal.Zero;
+
     // Handles image variables
     WebImage photo = null;
     var newImageName = "";
     var imagePath = "";
-
-    // Assign form data into variables
-    name = Request.Form["Name"];
-    description = Request.Form["Description"];
-    category = Request.Form["Category"];
-    price = Request.Form["Price"].AsDecimal();
     
     if (IsPost && Validation.IsValid()) {
 
@@ -36,6 +31,12 @@
         }
      
         if(ModelState.IsValid) {
+            // Assign form data into variables
+            name = Request.Form["Name"];
+            description = Request.Form["Description"];
+            category = Request.Form["Category"];
+            price = Request.Form["Price"].AsDecimal();
+
             // Define the insert query. The values to assign to the
             // columns in the Product table are defined as parameters
             // with the VALUES keyword.
@@ -74,7 +75,9 @@
             }
             // Redirect back to Inventory List
             Response.Redirect("~/Admin/InventoryManagement");
-        } 
+        }
+        
+        ModelState.AddFormError("Check you product form data");
     }     
 }
 

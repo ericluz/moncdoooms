@@ -3,21 +3,16 @@
     Page.Title = "User Management / Update Account";
 
     // Initialize general page variables
-    var fullname = "";
+    var firstname = "";
+    var lastname = "";
     var email = "";
-    var password = "";
     DateTime birthdate;
 
     // Setup validation
-    Validation.RequireField("fullname", "Providing a name is not hard as that.");
+    Validation.RequireField("firstname", "Providing a name is not hard as that.");
+    Validation.RequireField("lastname", "Providing a name is not hard as that.");
     Validation.RequireField("email", "Email is required to this user to signin.");
-    Validation.RequireField("password", "Please provide a password for this account.");
     Validation.RequireField("birthdate", "When this human born?");
-    Validation.Add("password",
-        Validator.StringLength(
-            maxLength: Int32.MaxValue,
-            minLength: 6,
-            errorMessage: "Password must be at least 6 characters"));
 
     var UserId  = UrlData[0];
 
@@ -32,20 +27,16 @@
         AntiForgery.Validate();
 
         // Assign for data into variables
-        fullname = Request.Form["fullname"];
+        firstname = Request.Form["firstname"];
+        lastname = Request.Form["lastname"];
         email = Request.Form["email"];
-        password = Request.Form["password"];
         birthdate = Convert.ToDateTime(Request.Form["birthdate"]);
 
-        string hashPassword = Crypto.HashPassword(password);
-
         // Update info on UserProfile table
-        var updateQueryString = "UPDATE UserProfile SET Email=@0, FirstName=@1, BirthDate=@2 WHERE UserId=@3" ;
-        int cntUpdateUserBasicInfo = db.Execute(updateQueryString, email, fullname, birthdate, UserId);
-        var updateQueryPassword = "UPDATE webpages_Membership SET Password=@0 WHERE UserId=@1";
-        int cntUpdateUserPassword = db.Execute(updateQueryPassword, hashPassword, UserId);
+        var updateQueryString = "UPDATE UserProfile SET Email=@0, FirstName=@1, LastName=@2, BirthDate=@3 WHERE UserId=@4" ;
+        int cntUpdateUserBasicInfo = db.Execute(updateQueryString, email, firstname, lastname, birthdate, UserId);
         
-        if (cntUpdateUserBasicInfo != 1 && cntUpdateUserPassword != 1) {
+        if (cntUpdateUserBasicInfo != 1) {
             ModelState.AddFormError("We have encountered a problem while updating this user's info not all changes have been made.");
         } else {
             Response.Redirect("~/Admin/UserManagement");    
@@ -59,10 +50,10 @@
         var extendedQuery_UserInfo = "SELECT * FROM webpages_Membership WHERE UserId=@0";
         var row_ext = db.QuerySingle(extendedQuery_UserInfo, UserId);
 
-        fullname = row.FirstName;
+        firstname = row.FirstName;
+        lastname = row.LastName;
         email = row.Email;
         birthdate = Convert.ToDateTime(row.BirthDate);
-        password = row_ext.Password;
     }
 
 }
@@ -95,10 +86,18 @@
                 <form id="update-user-form" class="form-horizontal" role="form" method="POST">
                 @AntiForgery.GetHtml()
                     <div class="form-group">
-                        <label class="col-sm-2 control-label">Full Name:</label>
+                        <label class="col-sm-2 control-label">First Name:</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" name="fullname" value="@fullname" required />
-                            @Html.ValidationMessage("fullname")
+                            <input type="text" class="form-control" name="firstname" value="@firstname" required />
+                            @Html.ValidationMessage("firstname")
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Last Name:</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" name="lastname" value="@lastname" required />
+                            @Html.ValidationMessage("lastname")
                         </div>
                     </div>
 
@@ -115,14 +114,6 @@
                         <div class="col-sm-10">
                         <input type="email" class="form-control" name="email" value="@email" required />
                             @Html.ValidationMessage("email")
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">New Password:</label>
-                        <div class="col-sm-10">
-                        <input type="password" class="form-control" name="password" required />
-                            @Html.ValidationMessage("password")
                         </div>
                     </div>
                 </form>

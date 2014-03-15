@@ -81,6 +81,12 @@
 
     if (action != "profile") {
     // To avoid conflict validation on user profile
+    Validation.RequireField("currentPassword", "The current password field is required.");
+    Validation.Add("currentPassword",
+        Validator.StringLength(
+            maxLength: Int32.MaxValue,
+            minLength: 6,
+            errorMessage: "Current password must be at least 6 characters"));
     Validation.RequireField("newPassword", "The new password field is required.");
     Validation.Add("confirmPassword",
         Validator.Required("The confirm new password field is required."),
@@ -138,16 +144,6 @@
         else if (action == "password") {
             // Handle local account password operations
             
-            // Setup validation
-            if (hasLocalAccount) {
-                Validation.RequireField("currentPassword", "The current password field is required.");
-                Validation.Add("currentPassword",
-                    Validator.StringLength(
-                        maxLength: Int32.MaxValue,
-                        minLength: 6,
-                        errorMessage: "Current password must be at least 6 characters"));
-            }
-
             var currentPassword = Request.Form["currentPassword"];
             var newPassword = Request.Form["newPassword"];
             var confirmPassword = Request.Form["confirmPassword"];
@@ -216,6 +212,9 @@
         <i class="fa fa-check-square-o fa-lg"></i>&nbsp;@successMessage
     </div>
 }
+
+<p>You're logged in as: <strong>@WebSecurity.CurrentUserName</strong></p>
+
 @if (!errorMessage.IsEmpty()) {
     /* Failed Message Appear Here */
     <div class="alert alert-danger">
@@ -224,15 +223,12 @@
     </div>
 }
 
-
-
-<p>You're logged in as: <strong>@WebSecurity.CurrentUserName</strong></p>
-
 @if (hasLocalAccount) {
     /* Display something if user has local password */
 } else {
     <div class="alert alert-danger">
-        <i class="fa fa-exclamation-triangle"></i>&nbsp;IMPORTANT: Set your Password before doing anytime.
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+        <i class="fa fa-exclamation-triangle fa-lg"></i>&nbsp;<strong>IMPORTANT:</strong> Set your Password before doing anytime.
     </div>
 }
 

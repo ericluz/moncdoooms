@@ -51,7 +51,7 @@
                 try {
                    // Create User
                    bool requireConfirmation = false;
-                   WebSecurity.CreateAccount(email, password, requireConfirmation);
+                   WebSecurity.CreateAccount(email, password, requireConfirmation); // Insert user data into webpages_Membership
 
                    Response.Redirect("~/Admin/UserManagement");
 
